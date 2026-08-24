@@ -263,7 +263,7 @@ const generateICS = (courses) => {
 
                 // Calculate start date (nearby)
                 const realStartDate = DataConverter.nearby(t.startDate, t.weekday);
-                const realEndDate = DataConverter.nearby(t.endDate, t.weekday); // Not sure if this is used for event end or repeats
+                const  realEndDate = DataConverter.nearby(t.endDate, t.weekday); // Not sure if this is used for event end or repeats
 
                 // Recurrence Rule
                 // UNTIL needs to be the end date + end time of the LAST occurrence.
