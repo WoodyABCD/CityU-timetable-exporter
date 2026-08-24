@@ -6,14 +6,15 @@ const DataConverter = {
     },
 
     convertWeekday: (inputTime) => {
+
         const map = {
             "M": "MON", "T": "TUE", "W": "WED", "R": "THU", "F": "FRI", "S": "SAT", "U": "SUN"
         };
-        return map[inputTime] || "SUN";
+        return map[inputTime.trim()] || "SUN";
     },
 
     convertLocation: (inputLocation) => {
-        const parts = inputLocation.split(" ");
+        const parts = inputLocation.trim().split(" ");
         let result = "Unknown location";
         const building = parts[0].toUpperCase();
 
@@ -21,7 +22,8 @@ const DataConverter = {
         else if (building === "BANK") result = "BOC";
         else if (building === "LI") result = "AC2";
         else if (building === "R") result = "CMC";
-
+        else if (building === "TBA") result = "TBA";
+        // console.log(parts);
         if (parts.length > 1) {
             result += "-" + parts[parts.length - 1];
         }
@@ -204,11 +206,12 @@ const parseInput = (text) => {
                 const endTime = DataConverter.convertTime(timeParts[1]);
 
                 // Day
+                // if(temp[2].length>1){continue;} // Skip if multiple days, as per Java code
                 const weekday = DataConverter.convertWeekday(temp[2]);
 
                 // Location
                 const location = DataConverter.convertLocation(temp[3]);
-
+                // if (location === "Unknown location") continue; // Skip if unknown location, as per Java code
                 // Date
                 const dateParts = temp[4].split(" - ");
                 const startDate = DataConverter.convertDate(dateParts[0]);
@@ -242,6 +245,7 @@ const parseInput = (text) => {
 
 // ICS Generation Logic
 const generateICS = (courses) => {
+    console.log("Generating ICS for courses:", courses);
     let builder = "";
     builder += "BEGIN:VCALENDAR\r\n";
     builder += "VERSION:2.0\r\n";
@@ -253,29 +257,34 @@ const generateICS = (courses) => {
 
     courses.forEach(c => {
         c.timeslots.forEach(t => {
-            const title = `${t.location}(${c.id}${t.type ? t.type.charAt(0) : ''})`; // Adjusted similar to Java
+            try {
 
-            // Calculate start date (nearby)
-            const realStartDate = DataConverter.nearby(t.startDate, t.weekday);
-            const realEndDate = DataConverter.nearby(t.endDate, t.weekday); // Not sure if this is used for event end or repeats
+                const title = `${t.location}(${c.id}${t.type ? t.type.charAt(0) : ''})`; // Adjusted similar to Java
 
-            // Recurrence Rule
-            // UNTIL needs to be the end date + end time of the LAST occurrence.
-            const untilStr = DataConverter.formatToUtc(t.endDate, t.endTime);
-            const rrule = `FREQ=WEEKLY;BYDAY=${byDayMap[t.weekday]};UNTIL=${untilStr}`;
+                // Calculate start date (nearby)
+                const realStartDate = DataConverter.nearby(t.startDate, t.weekday);
+                const realEndDate = DataConverter.nearby(t.endDate, t.weekday); // Not sure if this is used for event end or repeats
 
-            // Event Start/End
-            const startStr = DataConverter.formatToUtc(realStartDate, t.startTime);
-            const endStr = DataConverter.formatToUtc(realStartDate, t.endTime);
+                // Recurrence Rule
+                // UNTIL needs to be the end date + end time of the LAST occurrence.
+                const untilStr = DataConverter.formatToUtc(t.endDate, t.endTime);
+                const rrule = `FREQ=WEEKLY;BYDAY=${byDayMap[t.weekday]};UNTIL=${untilStr}`;
 
-            builder += "BEGIN:VEVENT\r\n";
-            builder += `UID:${crypto.randomUUID()}\r\n`;
-            builder += `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z\r\n`;
-            builder += `DTSTART:${startStr}\r\n`;
-            builder += `DTEND:${endStr}\r\n`;
-            builder += `RRULE:${rrule}\r\n`;
-            builder += `SUMMARY:${title}\r\n`;
-            builder += "END:VEVENT\r\n";
+                // Event Start/End
+                const startStr = DataConverter.formatToUtc(realStartDate, t.startTime);
+                const endStr = DataConverter.formatToUtc(realStartDate, t.endTime);
+
+                builder += "BEGIN:VEVENT\r\n";
+                builder += `UID:${crypto.randomUUID()}\r\n`;
+                builder += `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z\r\n`;
+                builder += `DTSTART:${startStr}\r\n`;
+                builder += `DTEND:${endStr}\r\n`;
+                builder += `RRULE:${rrule}\r\n`;
+                builder += `SUMMARY:${title}\r\n`;
+                builder += "END:VEVENT\r\n";
+            } catch (error) {
+
+            }
         });
     });
 
